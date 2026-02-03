@@ -1,0 +1,24 @@
+@import 'tailwindcss';
+
+@theme {
+    /* Base */
+    --color-background: #0c1222;
+    --color-foreground: #f1f5f9;
+    --color-muted-foreground: #94a3b8;
+    --color-border: rgba(255, 255, 255, 0.08);
+    /* Accent — lighthouse beam */
+    --color-accent: #f59e0b;
+    --color-accent-foreground: #0c1222;
+    /* Cards & muted surfaces */
+    --color-card: rgba(255, 255, 255, 0.03);
+    --color-card-foreground: #f1f5f9;
+    --color-muted: rgba(255, 255, 255, 0.05);
+    /* Legacy / forms */
+    --color-primary: #f59e0b;
+    --color-primary-foreground: #0c1222;
+    --color-input: rgba(255, 255, 255, 0.12);
+    --color-ring: #f59e0b;
+    /* Typography — set by next/font on html */
+    --font-sans: var(--font-dm-sans, ui-sans-serif, system-ui, sans-serif);
+    --font-heading: var(--font-outfit, ui-sans-serif, system-ui, sans-serif);
+}
