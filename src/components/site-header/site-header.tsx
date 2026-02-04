@@ -69,7 +69,22 @@ export async function SiteHeader({ className }: SiteHeaderProps) {
                                 </button>
                             </form>
                         </>
-                    ) : null}
+                    ) : (
+                        <>
+                            <Link
+                                href="/login"
+                                className="rounded-md px-3 py-2 text-sm font-medium text-foreground/90 transition hover:bg-white/10 hover:text-foreground"
+                            >
+                                Log in
+                            </Link>
+                            <Link
+                                href="/signup"
+                                className="rounded-md bg-accent px-4 py-2 text-sm font-medium text-accent-foreground shadow-sm transition hover:bg-accent/90"
+                            >
+                                Sign up
+                            </Link>
+                        </>
+                    )}
                 </nav>
             </div>
         </header>

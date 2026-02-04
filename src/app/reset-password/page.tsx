@@ -2,9 +2,7 @@ import { buildPageMeta } from '@/lib/seo/meta';
 import { ResetPasswordScreen } from '@/screens/reset-password/screen';
 
 interface PageProps {
-    searchParams: {
-        token?: string;
-    };
+    searchParams: Promise<{ token?: string }>;
 }
 
 export function generateMetadata() {
@@ -16,8 +14,8 @@ export function generateMetadata() {
     });
 }
 
-export default function Page(props: PageProps) {
-    const token = props.searchParams.token ?? null;
-    return <ResetPasswordScreen token={token} />;
+export default async function Page(props: PageProps) {
+    const { token } = await props.searchParams;
+    return <ResetPasswordScreen token={token ?? null} />;
 }
 

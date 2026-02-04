@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { buildPageMeta } from '@/lib/seo/meta';
 import { LoginScreen } from '@/screens/login/screen';
 
@@ -11,5 +12,9 @@ export function generateMetadata() {
 }
 
 export default function Page() {
-    return <LoginScreen />;
+    return (
+        <Suspense fallback={null}>
+            <LoginScreen />
+        </Suspense>
+    );
 }
