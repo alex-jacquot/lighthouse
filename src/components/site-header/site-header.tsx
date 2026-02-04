@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { auth, signOut } from '../../../auth';
 import { cn } from '@/lib/utils';
 
 function LighthouseLogo({ className }: { className?: string }) {
@@ -24,7 +25,10 @@ interface SiteHeaderProps {
     className?: string;
 }
 
-export function SiteHeader({ className }: SiteHeaderProps) {
+export async function SiteHeader({ className }: SiteHeaderProps) {
+    const session = await auth();
+    const user = session?.user;
+
     return (
         <header
             className={cn(
@@ -43,18 +47,29 @@ export function SiteHeader({ className }: SiteHeaderProps) {
                     <span className="font-heading text-xl">Lighthouse</span>
                 </Link>
                 <nav className="flex items-center gap-3" aria-label="Account">
-                    <Link
-                        href="/login"
-                        className="rounded-md px-3 py-2 text-sm font-medium text-foreground/90 transition hover:bg-white/10 hover:text-foreground"
-                    >
-                        Log in
-                    </Link>
-                    <Link
-                        href="/signup"
-                        className="rounded-md bg-accent px-4 py-2 text-sm font-medium text-accent-foreground shadow-sm transition hover:bg-accent/90"
-                    >
-                        Sign up
-                    </Link>
+                    {user ? (
+                        <>
+                            <span className="hidden text-sm text-muted-foreground sm:inline">
+                                Signed in as{' '}
+                                <span className="font-medium text-foreground">
+                                    {user.name ?? (user as { username?: string }).username ?? 'User'}
+                                </span>
+                            </span>
+                            <form
+                                action={async () => {
+                                    'use server';
+                                    await signOut({ redirectTo: '/' });
+                                }}
+                            >
+                                <button
+                                    type="submit"
+                                    className="rounded-md px-3 py-2 text-sm font-medium text-foreground/90 transition hover:bg-white/10 hover:text-foreground"
+                                >
+                                    Log out
+                                </button>
+                            </form>
+                        </>
+                    ) : null}
                 </nav>
             </div>
         </header>
