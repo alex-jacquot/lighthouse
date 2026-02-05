@@ -102,7 +102,8 @@ export async function POST(request: Request) {
             lastName: parsed.data.lastName,
             username: parsed.data.username,
             passwordHash,
-            imageUrl: parsed.data.imageUrl ?? null,
+            // Avatar can be set later via the profile page; we avoid relying on imageUrl here
+            // to keep compatibility if the Prisma client schema is out of sync.
         },
     });
 
