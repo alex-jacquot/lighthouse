@@ -44,6 +44,28 @@ export function SignupScreen() {
 
     const [formError, setFormError] = useState<string | null>(null);
     const [formSuccess, setFormSuccess] = useState<string | null>(null);
+    const [avatarFile, setAvatarFile] = useState<File | null>(null);
+    const [avatarError, setAvatarError] = useState<string | null>(null);
+
+    function handleAvatarChange(event: React.ChangeEvent<HTMLInputElement>) {
+        const file = event.target.files?.[0] ?? null;
+        setAvatarFile(null);
+        setAvatarError(null);
+
+        if (!file) return;
+
+        if (!file.type.startsWith('image/')) {
+            setAvatarError('Avatar must be an image file.');
+            return;
+        }
+
+        if (file.size > 2 * 1024 * 1024) {
+            setAvatarError('Avatar must be smaller than 2MB.');
+            return;
+        }
+
+        setAvatarFile(file);
+    }
 
     async function onSubmit(values: SignupFormValues) {
         const parsed = signupSchema.safeParse(values);
@@ -62,17 +84,16 @@ export function SignupScreen() {
         setFormError(null);
         setFormSuccess(null);
 
+        const formData = new FormData();
+        formData.append('firstName', values.firstName);
+        formData.append('lastName', values.lastName);
+        formData.append('username', values.username);
+        formData.append('password', values.password);
+        if (avatarFile) formData.append('avatar', avatarFile);
+
         const response = await fetch('/api/auth/signup', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                firstName: values.firstName,
-                lastName: values.lastName,
-                username: values.username,
-                password: values.password,
-            }),
+            body: formData,
         });
 
         if (!response.ok) {
@@ -157,6 +178,23 @@ export function SignupScreen() {
                     {errors.password?.message ? (
                         <p className="mt-1 text-xs text-destructive">{errors.password.message}</p>
                     ) : null}
+                </div>
+
+                <div>
+                    <label htmlFor="avatar" className="block text-sm font-medium">
+                        Profile picture (optional)
+                    </label>
+                    <input
+                        id="avatar"
+                        type="file"
+                        accept="image/png,image/jpeg,image/webp"
+                        onChange={handleAvatarChange}
+                        className="mt-1 block w-full text-sm text-muted-foreground file:mr-3 file:rounded-md file:border-0 file:bg-accent file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-accent-foreground hover:file:bg-accent/90"
+                    />
+                    <p className="mt-1 text-xs text-muted-foreground">
+                        PNG, JPG or WebP, up to 2MB. We&apos;ll crop it to a round avatar.
+                    </p>
+                    {avatarError ? <p className="mt-1 text-xs text-destructive">{avatarError}</p> : null}
                 </div>
 
                 <div>

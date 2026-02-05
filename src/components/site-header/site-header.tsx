@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { auth, signOut } from '../../../auth';
 import { cn } from '@/lib/utils';
 
@@ -27,7 +28,9 @@ interface SiteHeaderProps {
 
 export async function SiteHeader({ className }: SiteHeaderProps) {
     const session = await auth();
-    const user = session?.user;
+    const user = session?.user as
+        | ({ id?: string; username?: string; image?: string | null; name?: string | null } | null)
+        | undefined;
 
     return (
         <header
@@ -38,23 +41,51 @@ export async function SiteHeader({ className }: SiteHeaderProps) {
             role="banner"
         >
             <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
-                <Link
-                    href="/"
-                    className="flex items-center gap-2.5 font-semibold tracking-tight text-foreground no-underline transition hover:opacity-90"
-                    aria-label="Lighthouse — Home"
-                >
-                    <LighthouseLogo className="h-8 w-8 text-accent" aria-hidden />
-                    <span className="font-heading text-xl">Lighthouse</span>
-                </Link>
+                <div className="flex items-center gap-6">
+                    <Link
+                        href="/"
+                        className="flex items-center gap-2.5 font-semibold tracking-tight text-foreground no-underline transition hover:opacity-90"
+                        aria-label="Lighthouse — Landing"
+                    >
+                        <LighthouseLogo className="h-8 w-8 text-accent" aria-hidden />
+                        <span className="font-heading text-xl">Lighthouse</span>
+                    </Link>
+                    <Link
+                        href="/home"
+                        className="hidden text-sm font-medium text-foreground/90 transition hover:text-foreground sm:inline-block"
+                    >
+                        Home
+                    </Link>
+                </div>
                 <nav className="flex items-center gap-3" aria-label="Account">
                     {user ? (
                         <>
-                            <span className="hidden text-sm text-muted-foreground sm:inline">
-                                Signed in as{' '}
-                                <span className="font-medium text-foreground">
-                                    {user.name ?? (user as { username?: string }).username ?? 'User'}
+                            <Link
+                                href="/profile"
+                                className="flex items-center gap-2 rounded-full border border-transparent px-2 py-1 text-sm text-foreground transition hover:border-border hover:bg-white/5"
+                                aria-label="Your profile"
+                            >
+                                <span className="hidden text-sm text-muted-foreground sm:inline">
+                                    {user.name ?? user.username ?? 'Your profile'}
                                 </span>
-                            </span>
+                                <span className="relative inline-flex h-8 w-8 shrink-0 overflow-hidden rounded-full bg-muted">
+                                    {user.image ? (
+                                        <Image
+                                            src={user.image}
+                                            alt="Profile picture"
+                                            fill
+                                            sizes="32px"
+                                            className="object-cover"
+                                        />
+                                    ) : (
+                                        <span className="flex h-full w-full items-center justify-center text-xs font-semibold text-muted-foreground">
+                                            {(user.name ?? user.username ?? 'U')
+                                                .slice(0, 2)
+                                                .toUpperCase()}
+                                        </span>
+                                    )}
+                                </span>
+                            </Link>
                             <form
                                 action={async () => {
                                     'use server';

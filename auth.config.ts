@@ -38,12 +38,31 @@ export default {
                     id: user.id,
                     name: `${user.firstName} ${user.lastName}`.trim() || user.username,
                     username: user.username,
+                    imageUrl: (user as { imageUrl?: string | null }).imageUrl ?? undefined,
                 };
             },
         }),
     ],
     session: {
         strategy: 'jwt',
+    },
+    callbacks: {
+        async jwt({ token, user }) {
+            if (user) {
+                token.id = (user as { id?: string }).id;
+                token.username = (user as { username?: string }).username;
+                token.image = (user as { imageUrl?: string | null }).imageUrl ?? token.image;
+            }
+            return token;
+        },
+        async session({ session, token }) {
+            if (session.user) {
+                (session.user as { id?: string }).id = (token as { id?: string }).id;
+                (session.user as { username?: string }).username = (token as { username?: string }).username;
+                session.user.image = (token as { image?: string }).image ?? session.user.image;
+            }
+            return session;
+        },
     },
     pages: {
         signIn: '/login',

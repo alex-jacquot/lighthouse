@@ -17,16 +17,21 @@ model PostIt {
 }
 
 model User {
-    id                  String   @id @default(cuid())
+    id                  String        @id @default(cuid())
     firstName           String
     lastName            String
-    username            String   @unique
+    username            String        @unique
     passwordHash        String
-    createdAt           DateTime @default(now())
-    updatedAt           DateTime @updatedAt
+    imageUrl            String?
+    createdAt           DateTime      @default(now())
+    updatedAt           DateTime      @updatedAt
     accounts            Account[]
     sessions            Session[]
     passwordResetTokens PasswordResetToken[]
+
+    posts        Post[]
+    comments     Comment[]
+    likedPosts   Post[]      @relation("PostLikes")
 }
 
 model Account {
@@ -72,3 +77,39 @@ model PasswordResetToken {
     expiresAt DateTime
     createdAt DateTime @default(now())
 }
+
+model Post {
+    id          String    @id @default(cuid())
+    authorId    String
+    author      User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+    title       String
+    description String
+    imageUrl    String?
+    category    String    @default("general")
+
+    likesCount  Int       @default(0)
+    state       String    @default("active") // expected values: active, hidden, deleted
+
+    createdAt   DateTime  @default(now())
+    updatedAt   DateTime  @updatedAt
+    deletedAt   DateTime?
+
+    comments    Comment[]
+    likedBy     User[]    @relation("PostLikes")
+}
+
+model Comment {
+    id        String   @id @default(cuid())
+    postId    String
+    authorId  String
+
+    post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+    author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+    content   String
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+    deletedAt DateTime?
+}
+
