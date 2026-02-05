@@ -22,7 +22,7 @@ model User {
     lastName            String
     username            String        @unique
     passwordHash        String
-    imageUrl            String?
+    imageUrl            String        @default("https://placehold.co/256x256.png?text=User")
     createdAt           DateTime      @default(now())
     updatedAt           DateTime      @updatedAt
     accounts            Account[]

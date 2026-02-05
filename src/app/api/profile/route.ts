@@ -75,7 +75,7 @@ export async function PATCH(request: Request) {
             firstName,
             lastName,
             username,
-            imageUrl: imageUrl ?? null,
+            imageUrl: imageUrl ?? 'https://placehold.co/256x256.png?text=User',
         },
         select: {
             firstName: true,

@@ -102,8 +102,7 @@ export async function POST(request: Request) {
             lastName: parsed.data.lastName,
             username: parsed.data.username,
             passwordHash,
-            // Avatar can be set later via the profile page; we avoid relying on imageUrl here
-            // to keep compatibility if the Prisma client schema is out of sync.
+            imageUrl: parsed.data.imageUrl ?? 'https://placehold.co/256x256.png?text=User',
         },
     });
 
