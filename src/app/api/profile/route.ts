@@ -29,12 +29,7 @@ export async function GET() {
         return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    // The generated Prisma client does include `imageUrl` on User,
-    // but the type in this route can lag behind after schema changes.
-    // We trust the runtime shape here.
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-    const typedUser = user as any;
-    const { firstName, lastName, username, imageUrl } = typedUser;
+    const { firstName, lastName, username, imageUrl } = user;
 
     return NextResponse.json(
         {
@@ -80,19 +75,14 @@ export async function PATCH(request: Request) {
 
     const updated = await prisma.user.update({
         where: { id: session.user.id },
-        // TypeScript can lag behind Prisma's generated types; cast to any here.
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-        data: ({
+        data: {
             firstName,
             lastName,
             username,
             imageUrl: imageUrl ?? 'https://placehold.co/256x256.png?text=User',
-        } as any),
+        },
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-    const safeUpdated = updated as any;
-
-    return NextResponse.json(safeUpdated, { status: 200 });
+    return NextResponse.json(updated, { status: 200 });
 }
 

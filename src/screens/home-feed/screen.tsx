@@ -241,7 +241,29 @@ export function HomeFeedScreen() {
                     </div>
 
                     {isLoading ? (
-                        <p className="text-sm text-muted-foreground">Loading posts…</p>
+                        <ul className="space-y-3" aria-label="Loading posts" role="status">
+                            {Array.from({ length: 3 }).map((_, index) => (
+                                <li
+                                    // eslint-disable-next-line react/no-array-index-key
+                                    key={index}
+                                    className="animate-pulse rounded-xl border border-border bg-card p-4 text-card-foreground shadow-sm"
+                                >
+                                    <div className="flex items-start justify-between gap-4">
+                                        <div className="space-y-2">
+                                            <div className="h-3 w-32 rounded bg-muted" />
+                                            <div className="h-2 w-24 rounded bg-muted/60" />
+                                        </div>
+                                        <div className="h-5 w-16 rounded-full bg-muted/60" />
+                                    </div>
+                                    <div className="mt-4 space-y-2">
+                                        <div className="h-3 w-40 rounded bg-muted" />
+                                        <div className="h-3 w-56 rounded bg-muted/70" />
+                                        <div className="h-3 w-48 rounded bg-muted/60" />
+                                    </div>
+                                    <div className="mt-4 h-40 w-full rounded-md bg-muted/70" />
+                                </li>
+                            ))}
+                        </ul>
                     ) : !posts || posts.length === 0 ? (
                         <p className="text-sm text-muted-foreground">
                             No posts yet. Be the first to share something!
@@ -298,6 +320,8 @@ export function HomeFeedScreen() {
                                     <div className="mt-3 text-xs text-muted-foreground">
                                         {post.likesCount} like{post.likesCount === 1 ? '' : 's'}
                                     </div>
+
+                                    <CommentsForPost postId={post.id} />
                                 </li>
                             ))}
                         </ul>
@@ -454,6 +478,116 @@ export function HomeFeedScreen() {
             </div>
         ) : null}
         </>
+    );
+}
+
+interface CommentsForPostProps {
+    postId: string;
+}
+
+function CommentsForPost(props: CommentsForPostProps) {
+    const { postId } = props;
+    const [content, setContent] = useState('');
+    const [error, setError] = useState<string | null>(null);
+
+    const {
+        data: comments,
+        isLoading,
+        refetch,
+    } = trpc.comment.listByPost.useQuery({ postId });
+
+    const utils = trpc.useUtils();
+
+    const createComment = trpc.comment.create.useMutation({
+        onSuccess: async () => {
+            await utils.comment.listByPost.invalidate({ postId });
+        },
+    });
+
+    const toggleLike = trpc.comment.toggleLike.useMutation({
+        onSuccess: async () => {
+            await utils.comment.listByPost.invalidate({ postId });
+        },
+    });
+
+    async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+        event.preventDefault();
+        const trimmed = content.trim();
+        if (!trimmed) {
+            setError('Comment cannot be empty.');
+            return;
+        }
+
+        setError(null);
+
+        try {
+            await createComment.mutateAsync({ postId, content: trimmed });
+            setContent('');
+            await refetch();
+        } catch (mutationError) {
+            setError('Unable to post comment. Please try again.');
+        }
+    }
+
+    return (
+        <section className="mt-4 space-y-3" aria-label="Comments">
+            <form onSubmit={handleSubmit} className="space-y-2">
+                <label htmlFor={`comment-${postId}`} className="block text-xs font-medium text-muted-foreground">
+                    Add a comment
+                </label>
+                <div className="flex gap-2">
+                    <input
+                        id={`comment-${postId}`}
+                        type="text"
+                        value={content}
+                        onChange={event => setContent(event.target.value)}
+                        className="flex-1 rounded-md border border-border bg-background px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-accent"
+                        placeholder="Write a comment…"
+                    />
+                    <button
+                        type="submit"
+                        disabled={createComment.isPending}
+                        className="rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-accent-foreground hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-70"
+                    >
+                        Comment
+                    </button>
+                </div>
+                {error ? <p className="text-xs text-destructive">{error}</p> : null}
+            </form>
+
+            {isLoading ? (
+                <p className="text-xs text-muted-foreground">Loading comments…</p>
+            ) : !comments || comments.length === 0 ? (
+                <p className="text-xs text-muted-foreground">No comments yet.</p>
+            ) : (
+                <ul className="space-y-2" role="list">
+                    {comments.map(comment => (
+                        <li key={comment.id} className="rounded-md border border-border/60 bg-background/40 px-3 py-2">
+                            <div className="flex items-center justify-between gap-2">
+                                <div>
+                                    <p className="text-xs font-medium">
+                                        {comment.author.firstName && comment.author.lastName
+                                            ? `${comment.author.firstName} ${comment.author.lastName}`
+                                            : comment.author.username}
+                                    </p>
+                                    <p className="text-[10px] text-muted-foreground">
+                                        {new Date(comment.createdAt).toLocaleString()}
+                                    </p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => toggleLike.mutate({ commentId: comment.id })}
+                                    className="rounded-full border border-border px-2 py-0.5 text-[10px] text-muted-foreground hover:bg-white/5"
+                                >
+                                    ❤️ {comment.likesCount}
+                                </button>
+                            </div>
+                            <p className="mt-1 text-xs text-muted-foreground">{comment.content}</p>
+                        </li>
+                    ))}
+                </ul>
+            )}
+        </section>
     );
 }
 

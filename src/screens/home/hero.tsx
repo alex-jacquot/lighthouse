@@ -26,10 +26,10 @@ export function Hero() {
                         Get started
                     </Link>
                     <Link
-                        href="/post-its"
+                        href="/home"
                         className="w-full rounded-lg border border-border bg-background px-6 py-3 text-center font-medium text-foreground transition hover:bg-white/5 sm:w-auto"
                     >
-                        Try post-its
+                        Go to your feed
                     </Link>
                 </div>
             </div>
