@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { z } from 'zod';
 import { trpc } from '@/trpc/client';
+import type { RouterOutputs } from '@/trpc/client';
 
 const createPostSchema = z.object({
     title: z.string().min(1, 'Title is required').max(200),
@@ -485,48 +486,120 @@ interface CommentsForPostProps {
     postId: string;
 }
 
+type CommentFromList = RouterOutputs['comment']['listByPost'][number];
+
+function buildOptimisticComment(postId: string, content: string): CommentFromList {
+    const now = new Date();
+    return {
+        id: `opt-${now.getTime()}`,
+        postId,
+        content,
+        createdAt: now,
+        updatedAt: now,
+        deletedAt: null,
+        likesCount: 0,
+        authorId: '',
+        author: {
+            id: '',
+            username: 'You',
+            firstName: 'You',
+            lastName: '',
+            imageUrl: '',
+        },
+    };
+}
+
 function CommentsForPost(props: CommentsForPostProps) {
     const { postId } = props;
     const [content, setContent] = useState('');
     const [error, setError] = useState<string | null>(null);
+    const [optimisticLikedIds, setOptimisticLikedIds] = useState<Set<string>>(new Set());
 
     const {
         data: comments,
         isLoading,
-        refetch,
     } = trpc.comment.listByPost.useQuery({ postId });
 
     const utils = trpc.useUtils();
 
     const createComment = trpc.comment.create.useMutation({
-        onSuccess: async () => {
+        onMutate: async (variables) => {
+            setError(null);
+            setContent('');
+            await utils.comment.listByPost.cancel({ postId });
+            const previous = utils.comment.listByPost.getData({ postId });
+            const optimistic = buildOptimisticComment(postId, variables.content);
+            utils.comment.listByPost.setData({ postId }, (old) =>
+                old ? [...old, optimistic] : [optimistic]
+            );
+            return { previousComments: previous };
+        },
+        onError: (_err, _variables, context) => {
+            if (context?.previousComments !== undefined) {
+                utils.comment.listByPost.setData({ postId }, context.previousComments);
+            }
+            setError('Unable to post comment. Please try again.');
+        },
+        onSettled: async () => {
             await utils.comment.listByPost.invalidate({ postId });
         },
     });
 
     const toggleLike = trpc.comment.toggleLike.useMutation({
-        onSuccess: async () => {
+        onMutate: async (variables) => {
+            await utils.comment.listByPost.cancel({ postId });
+            const previous = utils.comment.listByPost.getData({ postId });
+            const comment = previous?.find((c) => c.id === variables.commentId);
+            if (!comment) return { previousComments: previous };
+
+            const nextLiked = !optimisticLikedIds.has(variables.commentId);
+            setOptimisticLikedIds((prev) => {
+                const next = new Set(prev);
+                if (nextLiked) next.add(variables.commentId);
+                else next.delete(variables.commentId);
+                return next;
+            });
+            const delta = nextLiked ? 1 : -1;
+            utils.comment.listByPost.setData({ postId }, (old) =>
+                old?.map((c) =>
+                    c.id === variables.commentId
+                        ? { ...c, likesCount: Math.max(0, c.likesCount + delta) }
+                        : c
+                ) ?? []
+            );
+            return { previousComments: previous };
+        },
+        onError: (_err, variables, context) => {
+            if (context?.previousComments !== undefined) {
+                utils.comment.listByPost.setData({ postId }, context.previousComments);
+            }
+            setOptimisticLikedIds((prev) => {
+                const next = new Set(prev);
+                next.delete(variables.commentId);
+                return next;
+            });
+        },
+        onSettled: async () => {
             await utils.comment.listByPost.invalidate({ postId });
         },
     });
 
-    async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    const handleLikeClick = useCallback(
+        (commentId: string) => {
+            toggleLike.mutate({ commentId });
+        },
+        [toggleLike]
+    );
+
+    function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
         event.preventDefault();
         const trimmed = content.trim();
         if (!trimmed) {
             setError('Comment cannot be empty.');
             return;
         }
-
         setError(null);
-
-        try {
-            await createComment.mutateAsync({ postId, content: trimmed });
-            setContent('');
-            await refetch();
-        } catch (mutationError) {
-            setError('Unable to post comment. Please try again.');
-        }
+        createComment.mutate({ postId, content: trimmed });
     }
 
     return (
@@ -576,8 +649,13 @@ function CommentsForPost(props: CommentsForPostProps) {
                                 </div>
                                 <button
                                     type="button"
-                                    onClick={() => toggleLike.mutate({ commentId: comment.id })}
-                                    className="rounded-full border border-border px-2 py-0.5 text-[10px] text-muted-foreground hover:bg-white/5"
+                                    onClick={() => handleLikeClick(comment.id)}
+                                    disabled={comment.id.startsWith('opt-')}
+                                    className={`rounded-full border px-2 py-0.5 text-[10px] hover:bg-white/5 disabled:opacity-50 disabled:pointer-events-none ${
+                                        optimisticLikedIds.has(comment.id)
+                                            ? 'border-accent text-accent'
+                                            : 'border-border text-muted-foreground'
+                                    }`}
                                 >
                                     ❤️ {comment.likesCount}
                                 </button>
